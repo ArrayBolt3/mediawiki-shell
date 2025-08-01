@@ -115,6 +115,12 @@ wiki_link_archiver() {
       if [[ "${raw_link}" =~ ^https://archive\.today/|^https://archive\.fo/|^https://archive\.is/|^https://archive\.li/|^https://archive\.md/|^https://archive\.ph/|^https://archive\.vn/ ]]; then
          continue
       fi
+      ## Skip large OS image files - and a bunch of other things
+      if [[ "${raw_link}" =~ \.img|\.iso|\.qcow2|\.vdi|\.vhdx|\.vmdk|\.deb|\.exe|\.tar.gz$ ]]; then
+         archived_link_list+=( "${raw_link}" )
+         append-once "${archived_link_list_file}" "${raw_link}"
+         continue
+      fi
 
       ## Search for links in the archive, if something is already archived,
       ## skip it
