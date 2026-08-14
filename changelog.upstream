@@ -1,3 +1,49 @@
+commit cfe75946f0ab6ecab2807f0f304a2a36e79d9d0a
+Merge: 505013c 318b034
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Fri Jul 31 13:10:27 2026 -0400
+
+    Merge remote-tracking branch 'refs/remotes/org-ai-assisted/master'
+
+commit 318b03429b9da9dacad11f78fc1ca581602740fb
+Merge: 505013c 11d3a80
+Author: assisted-by-ai (Bot Account) (Machine Account) <228987186+assisted-by-ai@users.noreply.github.com>
+Date:   Fri Jul 31 10:42:04 2026 -0400
+
+    Merge pull request from org-ai-assisted/ai
+
+    ci: gate the local workflows on CI_ENABLED_ORG_AI_ASSISTED
+
+commit 11d3a80fbebcbcf81417ff2c5ff8296454bae3ca
+Author: claude (dev138 9b889944-0a22-45e7-8fd6-c189113e33b9) <noreply@anthropic.com>
+Date:   Fri Jul 31 09:32:51 2026 -0400
+
+    ci: gate the local workflows on CI_ENABLED_ORG_AI_ASSISTED
+
+    Our workflows ran wherever the branch landed. Merged upstream they burn
+    Kicksecure/Whonix runner quota and post our CI into repos that never
+    asked for it; on a contributor fork they run the whole suite unbidden.
+    Only 5 of 136 workflow files across the fleet carried any owner gate.
+
+    Gate: a job-level `vars.CI_ENABLED_ORG_AI_ASSISTED == 'true'`, set once
+    as an organization variable on org-ai-assisted. Zero runner cost -- a job
+    whose `if:` is false never allocates one -- and the run still reports
+    green, so upstream and forks are not handed a red X for a lane they did
+    not opt into. A fork that WANTS the lane sets the same variable in its
+    own repo; no patch to these files, no fork of our workflows.
+
+    ANDed in front of any existing fork-PR guard rather than replacing it.
+
+    Verified: the workflow-yaml validator reports 0 findings for this repo.
+
+    Generated with assistance from Claude Code.
+
+commit 505013c3b170f1f2d22ff48bb2df1b3b6f3a11f5
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Thu Jul 2 06:32:56 2026 +0000
+
+    bumped changelog version
+
 commit d5915a76d9404556d5d9e280c89ff8cf17153c51
 Merge: 746455c db28d21
 Author: Patrick Schleizer <adrelanos@whonix.org>
