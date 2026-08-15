@@ -1,9 +1,54 @@
+commit 95ccafbc9a15d2d95ce055a017f444701205944b
+Merge: 2776fe6 cc111be
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Sat Aug 15 10:25:11 2026 -0400
+
+    Merge remote-tracking branch 'refs/remotes/ArrayBolt3/arraybolt3/trixie'
+
+commit cc111bec9c09a8131b136cc51c59a667a5b3748c
+Merge: 3f312f2 2776fe6
+Author: Aaron Rainbolt <arraybolt3@gmail.com>
+Date:   Fri Aug 14 18:26:26 2026 -0400
+
+    Merge branch 'master' into arraybolt3/trixie
+
+commit 3f312f2c9dbff21127e3f35fbb307339d59dfafe
+Merge: 505013c 25b080d
+Author: Aaron Rainbolt <arraybolt3@gmail.com>
+Date:   Fri Aug 14 18:17:43 2026 -0400
+
+    Merge branch 'ai' into arraybolt3/trixie
+
+commit 2776fe6e96d48d6309684261c112f18c642d9c6d
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Fri Jul 31 18:04:20 2026 +0000
+
+    bumped changelog version
+
 commit cfe75946f0ab6ecab2807f0f304a2a36e79d9d0a
 Merge: 505013c 318b034
 Author: Patrick Schleizer <adrelanos@whonix.org>
 Date:   Fri Jul 31 13:10:27 2026 -0400
 
     Merge remote-tracking branch 'refs/remotes/org-ai-assisted/master'
+
+commit 25b080dab738dbfb006bac3ae6e30086633f16f9
+Author: claude (dev142 b93fb2c6-e15f-4d45-8566-f3ded893b70e) <noreply@anthropic.com>
+Date:   Fri Jul 31 12:58:09 2026 -0400
+
+    add CodeQL consumer workflows (actions, python)
+
+    - Replaces GitHub default-setup CodeQL (web-UI state, no file
+      representation) with the org's file-based consumer wrappers.
+    - Byte-identical copies of
+      developer-meta-files/consumer-templates/.github/workflows/.
+    - No .github/dm-consumer.yml needed: consumer-codeql-actions.yml
+      passes no dm-consumer-section, and codeql-python's section is
+      optional (ci/dm-consumer-load.sh soft-skips when absent).
+    - queries stays the reusable's default security-and-quality,
+      a superset of the security-extended suite default setup used.
+
+    Generated with assistance from Claude Code.
 
 commit 318b03429b9da9dacad11f78fc1ca581602740fb
 Merge: 505013c 11d3a80
