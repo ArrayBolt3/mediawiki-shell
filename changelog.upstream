@@ -1,3 +1,16 @@
+commit 2c2f651e8539a17cddd6a6610c80068e63c0e029
+Merge: 8ae4c1d 6fdc359
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Sat Aug 15 12:09:06 2026 -0400
+
+    Merge remote-tracking branch 'org-ai-assisted/master'
+
+commit 8ae4c1d4967b23242a441a2478e3ddc7a4430e73
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Sat Aug 15 16:02:51 2026 +0000
+
+    bumped changelog version
+
 commit 95ccafbc9a15d2d95ce055a017f444701205944b
 Merge: 2776fe6 cc111be
 Author: Patrick Schleizer <adrelanos@whonix.org>
@@ -18,6 +31,15 @@ Author: Aaron Rainbolt <arraybolt3@gmail.com>
 Date:   Fri Aug 14 18:17:43 2026 -0400
 
     Merge branch 'ai' into arraybolt3/trixie
+
+commit 6fdc359446f4dc3166608b6939130ec81f27e402
+Merge: 2776fe6 25b080d
+Author: assisted-by-ai (Bot Account) (Machine Account) <228987186+assisted-by-ai@users.noreply.github.com>
+Date:   Sat Aug 1 05:01:45 2026 -0400
+
+    Merge pull request #8 from org-ai-assisted/ai
+
+    add CodeQL consumer workflows (actions, python)
 
 commit 2776fe6e96d48d6309684261c112f18c642d9c6d
 Author: Patrick Schleizer <adrelanos@whonix.org>
