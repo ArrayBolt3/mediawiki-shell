@@ -9,6 +9,7 @@ set -o errtrace
 set -o pipefail
 shopt -s inherit_errexit
 shopt -s shift_verbose
+export LC_ALL=C
 
 # shellcheck source=../share/mediawiki-shell/common
 source /usr/share/mediawiki-shell/common
@@ -31,7 +32,7 @@ Example:
 }
 
 # shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/parse_opt.sh
-source /usr/libexec/helper-scripts/parse_opt.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/parse_opt.sh
 
 continue_from=""
 keep_going_arg=""
@@ -83,19 +84,19 @@ WIKI_URL="$1"
 # shellcheck source=../share/mediawiki-shell/wiki-config
 source /usr/share/mediawiki-shell/wiki-config
 
-log info "TMPFOLDER    : $TMPFOLDER"
-log info "WIKI_URL     : $WIKI_URL"
-log info "WIKI_API     : $WIKI_API"
+log info "TMPFOLDER    : ${TMPFOLDER}"
+log info "WIKI_URL     : ${WIKI_URL}"
+log info "WIKI_API     : ${WIKI_API}"
 log info "continue_from: ${continue_from-}"
 
 mw_process_args=()
-if [ -n "$continue_from" ]; then
-  mw_process_args+=("--continue-from=$continue_from")
+if [ -n "${continue_from}" ]; then
+  mw_process_args+=("--continue-from=${continue_from}")
 fi
-for forwarded_arg in "$keep_going_arg" "$retry_arg" "$reset_arg" "$state_file_arg"; do
-  if [ -n "$forwarded_arg" ]; then
-    mw_process_args+=("$forwarded_arg")
+for forwarded_arg in "${keep_going_arg}" "${retry_arg}" "${reset_arg}" "${state_file_arg}"; do
+  if [ -n "${forwarded_arg}" ]; then
+    mw_process_args+=("${forwarded_arg}")
   fi
 done
 
-mw-process-all-pages "${mw_process_args[@]}" "${WIKI_URL}" 'mw-patch-modify-wiki-page' "$TMPFOLDER"
+mw-process-all-pages "${mw_process_args[@]}" "${WIKI_URL}" 'mw-patch-modify-wiki-page' "${TMPFOLDER}"

@@ -9,6 +9,7 @@ set -o errtrace
 set -o pipefail
 shopt -s inherit_errexit
 shopt -s shift_verbose
+export LC_ALL=C
 
 # shellcheck source=../share/mediawiki-shell/common
 source /usr/share/mediawiki-shell/common
@@ -24,12 +25,12 @@ Defaults:
   OUTPUT=todo
 Example:
   ${0##*/} 'https://www.kicksecure.com/w' 'https://www.whonix.org/w' About
-  ${0##*/} 'https://www.kicksecure.com/w' 'https://www.whonix.org/w' About $TMPFOLDER/About" >&2
+  ${0##*/} 'https://www.kicksecure.com/w' 'https://www.whonix.org/w' About ${TMPFOLDER}/About" >&2
   exit 1
 }
 
 # shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/parse_opt.sh
-source /usr/libexec/helper-scripts/parse_opt.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/parse_opt.sh
 
 edit_msg=""
 
@@ -66,36 +67,36 @@ WIKI_URL="$1"
 wiki_url_target="$2"
 page_title="$3"
 page_title_local="${4-}"
-if [ -z "$page_title_local" ]; then
+if [ -z "${page_title_local}" ]; then
   log info "default output_file: yes"
-  page_title_local="$(set_backup_page_item "$page_title")"
-  output_file="$TMPFOLDER/$page_title_local"
-  assert_path_within_dir "$TMPFOLDER" "$output_file"
+  page_title_local="$(set_backup_page_item "${page_title}")"
+  output_file="${TMPFOLDER}/${page_title_local}"
+  assert_path_within_dir "${TMPFOLDER}" "${output_file}"
 else
   log info "default output_file: no"
-  output_file="$page_title_local"
+  output_file="${page_title_local}"
 fi
 
 check_vars_exist wiki_url_target page_title
 
 ## Defense-in-depth: check page_title for malicious unicode before
 ## using it for fetch and edit operations.
-printf '%s\n' "$page_title" | unicode-show
+printf '%s\n' "${page_title}" | unicode-show
 
 # shellcheck source=../share/mediawiki-shell/wiki-config
 source /usr/share/mediawiki-shell/wiki-config
 
-log info "WIKI_URL             : $WIKI_URL"
-log info "WIKI_API             : $WIKI_API"
-log info "wiki_url_target      : $wiki_url_target"
-log info "page_title           : $page_title"
-log info "page_title_local     : $page_title_local"
-log info "output_file          : $output_file"
+log info "WIKI_URL             : ${WIKI_URL}"
+log info "WIKI_API             : ${WIKI_API}"
+log info "wiki_url_target      : ${wiki_url_target}"
+log info "page_title           : ${page_title}"
+log info "page_title_local     : ${page_title_local}"
+log info "output_file          : ${output_file}"
 
 #mw-login-test "$WIKI_URL"
 
-log info "Fetching page '$WIKI_URL' '$page_title' '$output_file'..."
-mw-fetch "$WIKI_URL" "$page_title" "$output_file"
+log info "Fetching page '${WIKI_URL}' '${page_title}' '${output_file}'..."
+mw-fetch "${WIKI_URL}" "${page_title}" "${output_file}"
 log info "Fetch page success."
 
 ## time-of-check to time-of-use TOCTOU
@@ -103,14 +104,14 @@ log info "Fetch page success."
 ## Checking for pending edits before fetching page would leave room for
 ## making a pending edit after the page has been fetched.
 ## This ensures that the fetched edit was not pending, i.e. confirmed.
-mw-page-pending-check "$WIKI_URL" "$page_title"
+mw-page-pending-check "${WIKI_URL}" "${page_title}"
 
-log info "Editing page... '$wiki_url_target' '$output_file' '$page_title'"
+log info "Editing page... '${wiki_url_target}' '${output_file}' '${page_title}'"
 
-if [ -n "$edit_msg" ]; then
-  mw-edit "$wiki_url_target" "$output_file" "$page_title" "$edit_msg"
+if [ -n "${edit_msg}" ]; then
+  mw-edit "${wiki_url_target}" "${output_file}" "${page_title}" "${edit_msg}"
 else
-  mw-edit "$wiki_url_target" "$output_file" "$page_title"
+  mw-edit "${wiki_url_target}" "${output_file}" "${page_title}"
 fi
 
 log info "Edit page success."

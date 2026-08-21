@@ -7,11 +7,14 @@ set -o errexit
 set -o nounset
 set -o errtrace
 set -o pipefail
+shopt -s inherit_errexit
+shopt -s shift_verbose
+export LC_ALL=C
 
 # shellcheck source=../share/mediawiki-shell/common
 source /usr/share/mediawiki-shell/common
 # shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/strings.bsh
-source /usr/libexec/helper-scripts/strings.bsh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/strings.bsh
 
 log info "START"
 
@@ -20,7 +23,7 @@ exit_handler() {
   [[ -v retry_counter ]] || retry_counter=0
   is_whole_number "${retry_counter}" || retry_counter=0
   if (( retry_counter > 1 )); then
-    log info "success after attempt $retry_counter"
+    log info "success after attempt ${retry_counter}"
   fi
 }
 
@@ -45,27 +48,27 @@ check_vars_exist page output
 
 output_dir="$(dirname -- "${output}")"
 
-temp_page_normalized="$(set_backup_filename_item "$(set_backup_page_item "$page")")"
-temp_output_file="$TMPFOLDER/$temp_page_normalized"
-assert_path_within_dir "$TMPFOLDER" "$temp_output_file"
+temp_page_normalized="$(set_backup_filename_item "$(set_backup_page_item "${page}")")"
+temp_output_file="${TMPFOLDER}/${temp_page_normalized}"
+assert_path_within_dir "${TMPFOLDER}" "${temp_output_file}"
 
-log info "wiki_url        : $wiki_url"
-log info "page            : $page"
-log info "temp_output_file: $temp_output_file"
-log info "output          : $output"
+log info "wiki_url        : ${wiki_url}"
+log info "page            : ${page}"
+log info "temp_output_file: ${temp_output_file}"
+log info "output          : ${output}"
 
-mkdir -p -- "$output_dir"
-if ! test -d "$output_dir"; then
-  die 1 "output_dir '$output_dir' does not exist! Run?: mkdir --parents -- '$output_dir'"
+mkdir -p -- "${output_dir}"
+if ! test -d "${output_dir}"; then
+  die 1 "output_dir '${output_dir}' does not exist! Run?: mkdir --parents -- '${output_dir}'"
 fi
 
-if ! test -w "$output_dir"; then
-  die 1 "output_dir '$output_dir' unwritable! Run?: chown --recursive -- '$USER:$USER' '$output_dir'"
+if ! test -w "${output_dir}"; then
+  die 1 "output_dir '${output_dir}' unwritable! Run?: chown --recursive -- '${USER}:${USER}' '${output_dir}'"
 fi
 
 for retry_counter in {1..5}; do
-  if ! mw-fetch "$wiki_url" "$page" "$temp_output_file"; then
-    log warn "fetch attempt ${retry_counter} failed for page '$page'; retrying..."
+  if ! mw-fetch "${wiki_url}" "${page}" "${temp_output_file}"; then
+    log warn "fetch attempt ${retry_counter} failed for page '${page}'; retrying..."
     sleep 5
     continue
   fi
@@ -82,19 +85,19 @@ for retry_counter in {1..5}; do
   ## backup on a transient failure. Distinguish the two by exit code, mirroring
   ## mw-multi-wiki's handling.
   pending_exit_code=0
-  mw-page-pending-check "$wiki_url" "$page" || pending_exit_code="$?"
-  if [ "$pending_exit_code" = "10" ]; then
-    log warn "SKIP: page '$page' has PENDING edits."
+  mw-page-pending-check "${wiki_url}" "${page}" || pending_exit_code="$?"
+  if [ "${pending_exit_code}" = "10" ]; then
+    log warn "SKIP: page '${page}' has PENDING edits."
     exit 0
   fi
-  if [ "$pending_exit_code" != "0" ]; then
-    log warn "pending-check failed (rc=${pending_exit_code}) for page '$page'; retrying..."
+  if [ "${pending_exit_code}" != "0" ]; then
+    log warn "pending-check failed (rc=${pending_exit_code}) for page '${page}'; retrying..."
     sleep 5
     continue
   fi
 
-  mv -- "$temp_output_file" "$output"
-  log info "SUCCESS: page '$page' | output: '$output'"
+  mv -- "${temp_output_file}" "${output}"
+  log info "SUCCESS: page '${page}' | output: '${output}'"
 
   exit 0
 done
