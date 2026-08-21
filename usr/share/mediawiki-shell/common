@@ -3,13 +3,18 @@
 ## Copyright (C) 2025 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
 ## See the file COPYING for copying conditions.
 
+## style-ok: no-strict
+##
+## UTF-8 locale default (no block "export LC_ALL=C"): these tools process
+## Unicode wiki content, so the C byte-locale would break nocasematch,
+## "[:space:]" trimming and "grep -i" on non-ASCII. Byte-exact operations
+## carry an explicit "LC_ALL=C" prefix instead.
 set -o errexit
 set -o nounset
 set -o errtrace
 set -o pipefail
 shopt -s inherit_errexit
 shopt -s shift_verbose
-export LC_ALL=C
 
 # shellcheck source=../../../../helper-scripts/usr/libexec/helper-scripts/log_run_die.sh
 source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/log_run_die.sh
