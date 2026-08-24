@@ -3,10 +3,18 @@
 ## Copyright (C) 2025 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
 ## See the file COPYING for copying conditions.
 
+## style-ok: no-strict
+##
+## UTF-8 locale default (no block "export LC_ALL=C"): these tools process
+## Unicode wiki content, so the C byte-locale would break nocasematch,
+## "[:space:]" trimming and "grep -i" on non-ASCII. Byte-exact operations
+## carry an explicit "LC_ALL=C" prefix instead.
 set -o errexit
 set -o nounset
 set -o errtrace
 set -o pipefail
+shopt -s inherit_errexit
+shopt -s shift_verbose
 
 # shellcheck source=../share/mediawiki-shell/common
 source /usr/share/mediawiki-shell/common
@@ -24,8 +32,8 @@ Example:
   exit 1
 }
 
-# shellcheck source=/usr/libexec/helper-scripts/parse_opt.sh
-source /usr/libexec/helper-scripts/parse_opt.sh
+# shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/parse_opt.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/parse_opt.sh
 
 article_sanity_test=""
 ## https://www.mediawiki.org/wiki/Manual:Namespace
@@ -43,12 +51,27 @@ while true; do
   begin_optparse "${1:-}" "${2:-}" || break
   true "${opt-}" "${arg-}" "${opt_orig-}"
   case "${opt}" in
-    article-sanity-test) get_arg; article_sanity_test="${arg}";;
-    namespace-default-list) get_arg; namespace_default_list="${arg}";;
-    namespace-extra-list) get_arg; namespace_extra_list="${arg}";;
-    h|help) usage;;
-    --|"") break;;
-    *) die 2 "Invalid option: '${opt_orig}'"
+    article-sanity-test)
+      get_arg
+      article_sanity_test="${arg}"
+      ;;
+    namespace-default-list)
+      get_arg
+      namespace_default_list="${arg}"
+      ;;
+    namespace-extra-list)
+      get_arg
+      namespace_extra_list="${arg}"
+      ;;
+    h|help)
+      usage
+      ;;
+    --|"")
+      break
+      ;;
+    *)
+      die 2 "Invalid option: '${opt_orig}'"
+      ;;
   esac
   shift "${shift_n:-1}"
 done
@@ -70,7 +93,7 @@ range_arg query_type "${query_type}" allpages unreviewedpages querypage
 source /usr/share/mediawiki-shell/wiki-config
 
 api_extra_args=""
-case "$query_type" in
+case "${query_type}" in
   allpages)
     list=allpages
     namespace_keyword=apnamespace
@@ -99,59 +122,59 @@ case "$query_type" in
     ;;
 esac
 
-safe-rm -f -- "$allpages_file"
+safe-rm -f -- "${allpages_file}"
 
-log info "allpages_file         : $allpages_file"
-log info "namespace_default_list: $namespace_default_list"
-log info "namespace_extra_list  : $namespace_extra_list"
-log info "WIKI_URL  : $WIKI_URL"
-log info "WIKI_API  : $WIKI_API"
-log info "query_type: $query_type"
+log info "allpages_file         : ${allpages_file}"
+log info "namespace_default_list: ${namespace_default_list}"
+log info "namespace_extra_list  : ${namespace_extra_list}"
+log info "WIKI_URL  : ${WIKI_URL}"
+log info "WIKI_API  : ${WIKI_API}"
+log info "query_type: ${query_type}"
 
 ## Not required for public wiki.
 #mw-login-test "$WIKI_URL"
 
-for wiki_namespace_item in $namespace_extra_list $namespace_default_list; do
-  log info "wiki_namespace_item: $wiki_namespace_item"
+for wiki_namespace_item in ${namespace_extra_list} ${namespace_default_list}; do
+  log info "wiki_namespace_item: ${wiki_namespace_item}"
 
   api_continue_or_not=""
 
   while true; do
     api_base_link="${WIKI_API}?format=json&action=query&list=${list}&${api_limit_keyword_and_content}${api_extra_args}"
-    log info "api_base_link: $api_base_link ${namespace_keyword}=${wiki_namespace_item} ${api_continue_keyword}=${api_continue_or_not}"
+    log info "api_base_link: ${api_base_link} ${namespace_keyword}=${wiki_namespace_item} ${api_continue_keyword}=${api_continue_or_not}"
 
     query_result=$(curl_run \
       "${curl_opts[@]}" \
       --get \
       --data-urlencode "${namespace_keyword}=${wiki_namespace_item}" \
       --data-urlencode "${api_continue_keyword}=${api_continue_or_not}" \
-      "$api_base_link"
+      "${api_base_link}"
     )
 
-    case "$query_type" in
+    case "${query_type}" in
       allpages)
-        stecho "$query_result" | jq -r ".query.allpages[] | .title" | tee -a -- "$allpages_file" >/dev/null
+        stecho "${query_result}" | jq -r ".query.allpages[] | .title" | tee -a -- "${allpages_file}" >/dev/null
         ## If curl exits non-zero, consider no longer API continue.
         ## If curl exits zero, set variable api_continue_or_not.
-        if ! api_continue_or_not="$(stecho "$query_result" | jq -r ".continue | .apcontinue")"; then
+        if ! api_continue_or_not="$(stecho "${query_result}" | jq -r ".continue | .apcontinue")"; then
           break
         fi
         ## If api_continue_or_not is set to "null", we're done.
-        if [ "$api_continue_or_not" = "null" ]; then
+        if [ "${api_continue_or_not}" = "null" ]; then
           break
         fi
         ;;
       unreviewedpages)
-        stecho "$query_result" | jq -r '.query.unreviewedpages[] | .title' | tee -a -- "$allpages_file" >/dev/null
-        if ! api_continue_or_not="$(stecho "$query_result" | jq -r ".continue.urstart")"; then
+        stecho "${query_result}" | jq -r '.query.unreviewedpages[] | .title' | tee -a -- "${allpages_file}" >/dev/null
+        if ! api_continue_or_not="$(stecho "${query_result}" | jq -r ".continue.urstart")"; then
           break
         fi
-        if [ "$api_continue_or_not" = "null" ]; then
+        if [ "${api_continue_or_not}" = "null" ]; then
           break
         fi
         ;;
       querypage)
-        stecho "$query_result" | jq -r '.query.querypage.results[] | .title' | tee -a -- "$allpages_file" >/dev/null
+        stecho "${query_result}" | jq -r '.query.querypage.results[] | .title' | tee -a -- "${allpages_file}" >/dev/null
         ## Upstream does not support name spaces for this API call.
         break
         ;;
@@ -163,21 +186,21 @@ for wiki_namespace_item in $namespace_extra_list $namespace_default_list; do
   done
 done
 
-test -f "$allpages_file"
-if [ ! -s "$allpages_file" ]; then
+test -f "${allpages_file}"
+if [ ! -s "${allpages_file}" ]; then
   die 1 "allpages_file file is empty!" >&2
 fi
-unicode-show "$allpages_file"
+unicode-show "${allpages_file}"
 
-if [ -z "$article_sanity_test" ]; then
+if [ -z "${article_sanity_test}" ]; then
   log info "article_sanity_test not configured, ok."
   exit
 fi
 
-if grep -i -- "$article_sanity_test" "$allpages_file" >/dev/null 2>&1; then
-  log info "result_test does contain article_sanity_test '$article_sanity_test', ok. "
+if grep -i -- "${article_sanity_test}" "${allpages_file}" >/dev/null 2>&1; then
+  log info "result_test does contain article_sanity_test '${article_sanity_test}', ok. "
 else
-  log error "See script source code. result_test does not contain '$article_sanity_test'! allpages_file: '$allpages_file' allpages_file contents:"
-  stcat "$allpages_file" >&2
+  log error "See script source code. result_test does not contain '${article_sanity_test}'! allpages_file: '${allpages_file}' allpages_file contents:"
+  stcat "${allpages_file}" >&2
   die 1 'article_sanity_test check failed, cannot continue.'
 fi

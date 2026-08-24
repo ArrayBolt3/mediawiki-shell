@@ -3,29 +3,37 @@
 ## Copyright (C) 2025 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
 ## See the file COPYING for copying conditions.
 
+## style-ok: no-strict
+##
+## UTF-8 locale default (no block "export LC_ALL=C"): these tools process
+## Unicode wiki content, so the C byte-locale would break nocasematch,
+## "[:space:]" trimming and "grep -i" on non-ASCII. Byte-exact operations
+## carry an explicit "LC_ALL=C" prefix instead.
 set -o errexit
 set -o nounset
 set -o errtrace
 set -o pipefail
+shopt -s inherit_errexit
+shopt -s shift_verbose
 
 ## using 'retry' with '< /dev/null' due to upstream bug:
 ## https://github.com/minfrin/retry/issues/20
 ## Also destroys colors.
 #retry --times=5 --delay=3 -- "$@" < /dev/null
 
-# shellcheck disable=SC1091
-source /usr/libexec/helper-scripts/log_run_die.sh
+# shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/log_run_die.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/log_run_die.sh
 
 # Function to execute the command and capture the exit status
 execute_command() {
   exit_code=0
   "$@" || { exit_code=$?; true; };
   if (( exit_code == 0 )); then
-    log info "Command exited with status: $exit_code"
+    log info "Command exited with status: ${exit_code}"
   else
-    log warn "Command exited with status: $exit_code"
+    log warn "Command exited with status: ${exit_code}"
   fi
-  return "$exit_code"
+  return "${exit_code}"
 }
 
 # Main function to handle retries
@@ -35,18 +43,18 @@ attempt_command() {
   local retry_counter
   local exit_code
 
-  for retry_counter in $(seq 1 "$max_retries"); do
-    log info "Attempt $retry_counter of $max_retries..."
+  for retry_counter in $(seq 1 "${max_retries}"); do
+    log info "Attempt ${retry_counter} of ${max_retries}..."
     if execute_command "$@"; then
-      log info "Command succeeded on attempt $retry_counter."
+      log info "Command succeeded on attempt ${retry_counter}."
       return 0
     fi
-    log warn "Command failed on attempt $retry_counter. Retrying in $retry_delay seconds..."
-    sleep "$retry_delay"
+    log warn "Command failed on attempt ${retry_counter}. Retrying in ${retry_delay} seconds..."
+    sleep "${retry_delay}"
   done
 
-  log error "Command failed after $max_retries attempts."
-  return "$exit_code"
+  log error "Command failed after ${max_retries} attempts."
+  return "${exit_code}"
 }
 
 attempt_command "$@"

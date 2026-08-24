@@ -3,6 +3,12 @@
 ## Copyright (C) 2025 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
 ## See the file COPYING for copying conditions.
 
+## style-ok: no-strict
+##
+## UTF-8 locale default (no block "export LC_ALL=C"): these tools process
+## Unicode wiki content, so the C byte-locale would break nocasematch,
+## "[:space:]" trimming and "grep -i" on non-ASCII. Byte-exact operations
+## carry an explicit "LC_ALL=C" prefix instead.
 set -o errexit
 set -o nounset
 set -o errtrace
@@ -13,7 +19,8 @@ shopt -s shift_verbose
 # shellcheck source=../share/mediawiki-shell/common
 source /usr/share/mediawiki-shell/common
 
-source /usr/libexec/helper-scripts/strings.bsh
+# shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/strings.bsh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/strings.bsh
 
 log info "START"
 
@@ -43,11 +50,11 @@ Example:
 }
 
 # shellcheck source=../../../helper-scripts/usr/libexec/helper-scripts/parse_opt.sh
-source /usr/libexec/helper-scripts/parse_opt.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/parse_opt.sh
 
 default_wiki_url="https://www.kicksecure.com/w"
 default_wiki_url_target="https://www.whonix.org/w"
-default_output_dir="$HOME/mediawiki-shell/mirror-multi-wiki"
+default_output_dir="${HOME}/mediawiki-shell/mirror-multi-wiki"
 
 default_multiwiki_category="MultiWiki"
 default_delete_max="10"
@@ -138,13 +145,13 @@ fetch_category_members() {
       curl_run \
         "${curl_opts[@]}" \
         --get \
-        --data-urlencode "cmtitle=Category:$category" \
-        --data-urlencode "cmcontinue=$cm_continue" \
+        --data-urlencode "cmtitle=Category:${category}" \
+        --data-urlencode "cmcontinue=${cm_continue}" \
         "${api}?action=query&format=json&list=categorymembers&cmlimit=500"
     )"
-    stecho "$all_pages" | jq -r ".query.categorymembers[] | .title" | tee -a -- "$outfile" >/dev/null
-    cm_continue="$(stecho "$all_pages" | jq -r '.continue.cmcontinue // empty')"
-    if [ -z "$cm_continue" ]; then
+    stecho "${all_pages}" | jq -r ".query.categorymembers[] | .title" | tee -a -- "${outfile}" >/dev/null
+    cm_continue="$(stecho "${all_pages}" | jq -r '.continue.cmcontinue // empty')"
+    if [ -z "${cm_continue}" ]; then
       break
     fi
   done
@@ -160,15 +167,15 @@ page_exists_on_source() {
     curl_run \
       "${curl_opts[@]}" \
       --get \
-      --data-urlencode "titles=$page" \
+      --data-urlencode "titles=${page}" \
       "${WIKI_API}?action=query&format=json&prop=info"
   )"
   ## Missing pages carry a "missing" key (and a negative pageid). 'any'
   ## collapses to a single value, so no 'head' is needed (which would risk a
   ## SIGPIPE under 'set -o pipefail'). An empty page set yields "no", i.e.
   ## treated as still-existing, which fails safe (no deletion).
-  page_missing="$(stecho "$page_info_json" | jq -r 'if any(.query.pages[]?; has("missing")) then "yes" else "no" end')"
-  if [ "$page_missing" = "yes" ]; then
+  page_missing="$(stecho "${page_info_json}" | jq -r 'if any(.query.pages[]?; has("missing")) then "yes" else "no" end')"
+  if [ "${page_missing}" = "yes" ]; then
     return 1
   fi
   return 0
@@ -184,16 +191,16 @@ strip_category_tag() {
   infile="$1"
   outfile="$2"
   shopt -s nocasematch
-  while IFS= read -r line || [ -n "$line" ]; do
+  while IFS= read -r line || [ -n "${line}" ]; do
     ## Trim leading and trailing whitespace for the comparison only.
     trimmed="${line#"${line%%[![:space:]]*}"}"
     trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-    if [[ "$trimmed" == "[[category:${multiwiki_category}]]" \
-       || "$trimmed" == "[[category:${multiwiki_category}|"*"]]" ]]; then
+    if [[ "${trimmed}" == "[[category:${multiwiki_category}]]" \
+       || "${trimmed}" == "[[category:${multiwiki_category}|"*"]]" ]]; then
       continue
     fi
-    printf '%s\n' "$line"
-  done <"$infile" >"$outfile"
+    printf '%s\n' "${line}"
+  done <"${infile}" >"${outfile}"
   shopt -u nocasematch
 }
 
@@ -211,13 +218,13 @@ cleanup_stale_target_pages() {
   stale_file="${TMPFOLDER}/stale-pages.txt"
   detag_file="${TMPFOLDER}/detag-in"
   detag_out="${TMPFOLDER}/detag-out"
-  safe-rm -f -- "$target_pages_file" "$source_sorted" "$target_sorted" "$stale_file"
-  touch -- "$target_pages_file"
+  safe-rm -f -- "${target_pages_file}" "${source_sorted}" "${target_sorted}" "${stale_file}"
+  touch -- "${target_pages_file}"
 
   log info "CLEANUP | Enumerating Category:${multiwiki_category} on target '${target_api}'..."
-  fetch_category_members "$target_api" "$multiwiki_category" "$target_pages_file"
+  fetch_category_members "${target_api}" "${multiwiki_category}" "${target_pages_file}"
 
-  if [ ! -s "$target_pages_file" ]; then
+  if [ ! -s "${target_pages_file}" ]; then
     log info "CLEANUP | Target has no '${multiwiki_category}' members, nothing to clean, ok."
     return 0
   fi
@@ -226,120 +233,120 @@ cleanup_stale_target_pages() {
   ## '--multiwiki-extra-pages'. Anything in the target set but not in the keep
   ## set is stale. An empty source keep-set already aborted earlier, so this
   ## diff can never degrade into "delete everything".
-  LC_ALL=C sort -u -- "$allpages_file"     >"$source_sorted"
-  LC_ALL=C sort -u -- "$target_pages_file" >"$target_sorted"
-  LC_ALL=C comm -13 "$source_sorted" "$target_sorted" >"$stale_file"
+  LC_ALL=C sort -u -- "${allpages_file}"     >"${source_sorted}"
+  LC_ALL=C sort -u -- "${target_pages_file}" >"${target_sorted}"
+  LC_ALL=C comm -13 "${source_sorted}" "${target_sorted}" >"${stale_file}"
 
-  stale_count="$(awk 'END {print NR}' "$stale_file")"
-  if [ "$stale_count" = "0" ]; then
+  stale_count="$(awk 'END {print NR}' "${stale_file}")"
+  if [ "${stale_count}" = "0" ]; then
     log info "CLEANUP | No stale pages on target, ok."
     return 0
   fi
 
   log info "CLEANUP | Stale page candidates on target: ${stale_count}"
 
-  if [ "$delete_mode" = "true" ] && [ "$dry_run" != "true" ] && [ "$stale_count" -gt "$delete_max" ]; then
+  if [ "${delete_mode}" = "true" ] && [ "${dry_run}" != "true" ] && [ "${stale_count}" -gt "${delete_max}" ]; then
     die 1 "CLEANUP | Refusing to act on ${stale_count} stale pages (exceeds --delete-max=${delete_max}). Re-run with a higher --delete-max if this is intentional."
   fi
 
   while IFS=$'\n' read -r page; do
-    [ -n "$page" ] || continue
+    [ -n "${page}" ] || continue
 
     ## Defense-in-depth: reject malicious unicode before using the title.
-    printf '%s\n' "$page" | unicode-show
+    printf '%s\n' "${page}" | unicode-show
 
-    if page_exists_on_source "$page"; then
+    if page_exists_on_source "${page}"; then
       ## Source page still exists; only its category tag was removed.
-      if [ "$delete_mode" != "true" ]; then
-        log info "CLEANUP | [REPORT] would DE-TAG (source page still exists): '$page'"
+      if [ "${delete_mode}" != "true" ]; then
+        log info "CLEANUP | [REPORT] would DE-TAG (source page still exists): '${page}'"
         continue
       fi
       pending_exit_code=0
-      mw-page-pending-check "$wiki_url_target" "$page" || pending_exit_code="$?"
-      if [ "$pending_exit_code" = "10" ]; then
-        log warn "CLEANUP | DE-TAG skipped, target page has PENDING EDITS: '$page'"
+      mw-page-pending-check "${wiki_url_target}" "${page}" || pending_exit_code="$?"
+      if [ "${pending_exit_code}" = "10" ]; then
+        log warn "CLEANUP | DE-TAG skipped, target page has PENDING EDITS: '${page}'"
         continue
       fi
-      if [ "$pending_exit_code" != "0" ]; then
-        die 1 "CLEANUP | mw-page-pending-check failed for '$page' with exit code '$pending_exit_code'."
+      if [ "${pending_exit_code}" != "0" ]; then
+        die 1 "CLEANUP | mw-page-pending-check failed for '${page}' with exit code '${pending_exit_code}'."
       fi
-      log info "CLEANUP | DE-TAG '$page' on target..."
-      mw-fetch "$wiki_url_target" "$page" "$detag_file"
-      strip_category_tag "$detag_file" "$detag_out"
-      if [ ! -s "$detag_out" ]; then
-        log warn "CLEANUP | DE-TAG skipped, stripping the tag would empty '$page'; handle manually."
+      log info "CLEANUP | DE-TAG '${page}' on target..."
+      mw-fetch "${wiki_url_target}" "${page}" "${detag_file}"
+      strip_category_tag "${detag_file}" "${detag_out}"
+      if [ ! -s "${detag_out}" ]; then
+        log warn "CLEANUP | DE-TAG skipped, stripping the tag would empty '${page}'; handle manually."
         continue
       fi
-      mw-edit "$wiki_url_target" "$detag_out" "$page" "$detag_msg"
-      log info "CLEANUP | DE-TAG '$page' success."
+      mw-edit "${wiki_url_target}" "${detag_out}" "${page}" "${detag_msg}"
+      log info "CLEANUP | DE-TAG '${page}' success."
       continue
     fi
 
     ## Source page is gone; delete the stale target copy.
-    if [ "$delete_mode" != "true" ]; then
-      log info "CLEANUP | [REPORT] would DELETE (source page missing): '$page'"
+    if [ "${delete_mode}" != "true" ]; then
+      log info "CLEANUP | [REPORT] would DELETE (source page missing): '${page}'"
       continue
     fi
     pending_exit_code=0
-    mw-page-pending-check "$wiki_url_target" "$page" || pending_exit_code="$?"
-    if [ "$pending_exit_code" = "10" ]; then
-      log warn "CLEANUP | DELETE skipped, target page has PENDING EDITS: '$page'"
+    mw-page-pending-check "${wiki_url_target}" "${page}" || pending_exit_code="$?"
+    if [ "${pending_exit_code}" = "10" ]; then
+      log warn "CLEANUP | DELETE skipped, target page has PENDING EDITS: '${page}'"
       continue
     fi
-    if [ "$pending_exit_code" != "0" ]; then
-      die 1 "CLEANUP | mw-page-pending-check failed for '$page' with exit code '$pending_exit_code'."
+    if [ "${pending_exit_code}" != "0" ]; then
+      die 1 "CLEANUP | mw-page-pending-check failed for '${page}' with exit code '${pending_exit_code}'."
     fi
-    log info "CLEANUP | DELETE '$page' on target..."
-    mw-delete "$wiki_url_target" "$page" "$delete_reason_msg"
-    log info "CLEANUP | DELETE '$page' success."
-  done <"$stale_file"
+    log info "CLEANUP | DELETE '${page}' on target..."
+    mw-delete "${wiki_url_target}" "${page}" "${delete_reason_msg}"
+    log info "CLEANUP | DELETE '${page}' success."
+  done <"${stale_file}"
 }
 
 allpages_file="${TMPFOLDER}/allpages.txt"
-safe-rm -f -- "$allpages_file"
+safe-rm -f -- "${allpages_file}"
 
-log info "TMPFOLDER            : $TMPFOLDER"
-log info "WIKI_URL             : $WIKI_URL"
-log info "wiki_url_target      : $wiki_url_target"
-log info "WIKI_API             : $WIKI_API"
-log info "allpages_file        : $allpages_file"
-log info "multiwiki_category   : $multiwiki_category"
-log info "multiwiki_extra_pages: $multiwiki_extra_pages"
+log info "TMPFOLDER            : ${TMPFOLDER}"
+log info "WIKI_URL             : ${WIKI_URL}"
+log info "wiki_url_target      : ${wiki_url_target}"
+log info "WIKI_API             : ${WIKI_API}"
+log info "allpages_file        : ${allpages_file}"
+log info "multiwiki_category   : ${multiwiki_category}"
+log info "multiwiki_extra_pages: ${multiwiki_extra_pages}"
 log info "continue_from        : ${continue_from-}"
-log info "delete_mode          : $delete_mode"
-log info "delete_max           : $delete_max"
-log info "dry_run              : $dry_run"
+log info "delete_mode          : ${delete_mode}"
+log info "delete_max           : ${delete_max}"
+log info "dry_run              : ${dry_run}"
 
 state_setup "${WIKI_URL}_to_${wiki_url_target}"
 
-mkdir --parents -- "$output_dir"
+mkdir --parents -- "${output_dir}"
 
-if ! test -d "$output_dir"; then
-  log error "output_dir '$output_dir' does not exist! Run...?:"
-  stecho "mkdir --parents -- '$output_dir'"
+if ! test -d "${output_dir}"; then
+  log error "output_dir '${output_dir}' does not exist! Run...?:"
+  stecho "mkdir --parents -- '${output_dir}'"
   die 1 "Cannot continue."
 fi
 
-if ! test -w "$output_dir"; then
-  log error "output_dir '$output_dir' unwritable! Run...?:"
-  stecho "chown --recursive -- '$USER:$USER' '$output_dir'"
+if ! test -w "${output_dir}"; then
+  log error "output_dir '${output_dir}' unwritable! Run...?:"
+  stecho "chown --recursive -- '${USER}:${USER}' '${output_dir}'"
   die 1 "Cannot continue."
 fi
 
-mw-login-test "$wiki_url_target"
+mw-login-test "${wiki_url_target}"
 
-for multiwiki_extra_pages_item in $multiwiki_extra_pages; do
-  stecho "$multiwiki_extra_pages_item" | tee -a -- "$allpages_file" >/dev/null
+for multiwiki_extra_pages_item in ${multiwiki_extra_pages}; do
+  stecho "${multiwiki_extra_pages_item}" | tee -a -- "${allpages_file}" >/dev/null
 done
 
-fetch_category_members "$WIKI_API" "$multiwiki_category" "$allpages_file"
+fetch_category_members "${WIKI_API}" "${multiwiki_category}" "${allpages_file}"
 
-test -f "$allpages_file"
-if [ ! -s "$allpages_file" ]; then
+test -f "${allpages_file}"
+if [ ! -s "${allpages_file}" ]; then
   die 1 "allpages_file file is empty!"
 fi
-unicode-show "$allpages_file"
-counter_total="$(awk 'END {print NR}' "$allpages_file")"
+unicode-show "${allpages_file}"
+counter_total="$(awk 'END {print NR}' "${allpages_file}")"
 
 # shellcheck disable=SC2034  # mutated by should_start_processing via nameref
 continue_state="no"
@@ -347,17 +354,17 @@ counter_currently=0
 while IFS=$'\n' read -r item_from_all_pages; do
   (( counter_currently++ )) || true
 
-  if ! should_start_processing "$counter_currently" "$item_from_all_pages" "$continue_from" continue_state; then
-    log info "skip | $counter_currently / $counter_total | $item_from_all_pages"
+  if ! should_start_processing "${counter_currently}" "${item_from_all_pages}" "${continue_from}" continue_state; then
+    log info "skip | ${counter_currently} / ${counter_total} | ${item_from_all_pages}"
     continue
   fi
 
-  if state_should_skip "$item_from_all_pages"; then
-    log info "retry-skip | $counter_currently / $counter_total | already done | $item_from_all_pages"
+  if state_should_skip "${item_from_all_pages}"; then
+    log info "retry-skip | ${counter_currently} / ${counter_total} | already done | ${item_from_all_pages}"
     continue
   fi
 
-  log info "PAGE | $counter_currently / $counter_total | $item_from_all_pages"
+  log info "PAGE | ${counter_currently} / ${counter_total} | ${item_from_all_pages}"
 
   ## A page mirrored with pending edits (exit 10) is left unrecorded so a
   ## later --retry revisits it; only a clean mirror is recorded done.
@@ -365,43 +372,43 @@ while IFS=$'\n' read -r item_from_all_pages; do
 
   copy_wiki_pages_exit_code=0
 
-  TMPFOLDER="$TMPFOLDER" \
-    mw-copy-wiki-pages "--edit-msg=${edit_msg}" "$WIKI_URL" "$wiki_url_target" "$item_from_all_pages" \
+  TMPFOLDER="${TMPFOLDER}" \
+    mw-copy-wiki-pages "--edit-msg=${edit_msg}" "${WIKI_URL}" "${wiki_url_target}" "${item_from_all_pages}" \
       || copy_wiki_pages_exit_code="$?"
 
-  case "$copy_wiki_pages_exit_code" in
+  case "${copy_wiki_pages_exit_code}" in
     10)
-      log warn "PAGE - Skipped item_from_all_pages '$item_from_all_pages' because of pending edits."
+      log warn "PAGE - Skipped item_from_all_pages '${item_from_all_pages}' because of pending edits."
       page_pending="true"
       ;;
     0)
-      log info "PAGE - item_from_all_pages '$item_from_all_pages' mirroring success."
+      log info "PAGE - item_from_all_pages '${item_from_all_pages}' mirroring success."
       ;;
     *)
-      state_handle_failure "$item_from_all_pages" "mw-copy-wiki-pages rc=$copy_wiki_pages_exit_code"
+      state_handle_failure "${item_from_all_pages}" "mw-copy-wiki-pages rc=${copy_wiki_pages_exit_code}"
       continue
       ;;
   esac
 
-  if stecho "$item_from_all_pages" | grep --ignore-case --fixed-strings -- "File:" >/dev/null 2>&1; then
-    log info "FILE | $counter_currently / $counter_total | $item_from_all_pages"
+  if stecho "${item_from_all_pages}" | grep --ignore-case --fixed-strings -- "File:" >/dev/null 2>&1; then
+    log info "FILE | ${counter_currently} / ${counter_total} | ${item_from_all_pages}"
 
     copy_wiki_file_exit_code=0
 
-    TMPFOLDER="$TMPFOLDER" \
-      mw-copy-wiki-file "--edit-msg=${edit_msg}" "$WIKI_URL" "$wiki_url_target" "$item_from_all_pages" \
+    TMPFOLDER="${TMPFOLDER}" \
+      mw-copy-wiki-file "--edit-msg=${edit_msg}" "${WIKI_URL}" "${wiki_url_target}" "${item_from_all_pages}" \
         || copy_wiki_file_exit_code="$?"
 
-    case "$copy_wiki_file_exit_code" in
+    case "${copy_wiki_file_exit_code}" in
       10)
-        log warn "FILE - Skipped item_from_all_pages '$item_from_all_pages' because of pending edits."
+        log warn "FILE - Skipped item_from_all_pages '${item_from_all_pages}' because of pending edits."
         page_pending="true"
         ;;
       0)
-        log info "FILE - item_from_all_pages '$item_from_all_pages' mirroring success."
+        log info "FILE - item_from_all_pages '${item_from_all_pages}' mirroring success."
         ;;
       *)
-        state_handle_failure "$item_from_all_pages" "mw-copy-wiki-file rc=$copy_wiki_file_exit_code"
+        state_handle_failure "${item_from_all_pages}" "mw-copy-wiki-file rc=${copy_wiki_file_exit_code}"
         continue
         ;;
     esac
@@ -409,11 +416,11 @@ while IFS=$'\n' read -r item_from_all_pages; do
     log info "FILE | No, not a file, ok."
   fi
 
-  if [ "$page_pending" != "true" ]; then
-    state_record_done "$item_from_all_pages"
+  if [ "${page_pending}" != "true" ]; then
+    state_record_done "${item_from_all_pages}"
   fi
 
-done <"$allpages_file"
+done <"${allpages_file}"
 
 ## ----------------------------------------------------------------------
 ## Deletion / cleanup pass.
@@ -432,11 +439,11 @@ done <"$allpages_file"
 ##
 ## Report-only unless '--delete' is given.
 ## ----------------------------------------------------------------------
-log info "CLEANUP | START (delete_mode=$delete_mode, delete_max=$delete_max)"
+log info "CLEANUP | START (delete_mode=${delete_mode}, delete_max=${delete_max})"
 cleanup_stale_target_pages
 log info "CLEANUP | END"
 
 state_finish
-if [ "$state_fail_count" -gt 0 ]; then
+if [ "${state_fail_count}" -gt 0 ]; then
   exit 2
 fi

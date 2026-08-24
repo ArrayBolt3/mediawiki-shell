@@ -3,6 +3,12 @@
 ## Copyright (C) 2025 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
 ## See the file COPYING for copying conditions.
 
+## style-ok: no-strict
+##
+## UTF-8 locale default (no block "export LC_ALL=C"): these tools process
+## Unicode wiki content, so the C byte-locale would break nocasematch,
+## "[:space:]" trimming and "grep -i" on non-ASCII. Byte-exact operations
+## carry an explicit "LC_ALL=C" prefix instead.
 set -o errexit
 set -o nounset
 set -o errtrace
@@ -10,22 +16,25 @@ set -o pipefail
 shopt -s inherit_errexit
 shopt -s shift_verbose
 
-# shellcheck disable=SC1091
-source /usr/libexec/helper-scripts/log_run_die.sh
-source /usr/libexec/helper-scripts/has.sh
-source /usr/libexec/helper-scripts/not_as_root.sh
-source /usr/libexec/helper-scripts/strings.bsh
+# shellcheck source=../../../../helper-scripts/usr/libexec/helper-scripts/log_run_die.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/log_run_die.sh
+# shellcheck source=../../../../helper-scripts/usr/libexec/helper-scripts/has.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/has.sh
+# shellcheck source=../../../../helper-scripts/usr/libexec/helper-scripts/not_as_root.sh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/not_as_root.sh
+# shellcheck source=../../../../helper-scripts/usr/libexec/helper-scripts/strings.bsh
+source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/strings.bsh
 
 collect_reqs() {
   local collect cmd
   collect=""
   for cmd in "${@}"; do
-    if ! has "$cmd"; then
-      collect="${collect:+$collect }$cmd"
+    if ! has "${cmd}"; then
+      collect="${collect:+${collect} }${cmd}"
     fi
   done
   if test ${#collect} -gt 0; then
-    die 1 "${FUNCNAME[0]}: command(s) unavailable: '$collect'" >&2
+    die 1 "${FUNCNAME[0]}: command(s) unavailable: '${collect}'" >&2
   fi
 }
 
@@ -36,7 +45,7 @@ check_vars_exist() {
   for var_name in "$@"; do
     check_variable_name "${var_name}" || exit 1
     if [ -z "${!var_name+x}" ]; then
-      die 1 "Variable '$var_name' is not set or is empty."
+      die 1 "Variable '${var_name}' is not set or is empty."
       exit 1
     fi
   done
@@ -78,8 +87,8 @@ output_file: '${output_file-unset}'
 error_handler() {
   local last_exit_code="$?"
   log error "
-BASH_COMMAND: '$BASH_COMMAND'
-failed with exit code '$last_exit_code'." >&2
+BASH_COMMAND: '${BASH_COMMAND}'
+failed with exit code '${last_exit_code}'." >&2
   error_output "called-by-error_handler"
   exit 1
 }
@@ -107,19 +116,19 @@ should_start_processing() {
   check_variable_name "$4" || return 1
   _ssp_state="$4"
 
-  if [ -z "$continue_from" ]; then
+  if [ -z "${continue_from}" ]; then
     return 0
   fi
 
-  if [ "$_ssp_state" = "yes" ]; then
+  if [ "${_ssp_state}" = "yes" ]; then
     return 0
   fi
 
-  if [[ "$continue_from" =~ ^[0-9]+$ ]]; then
+  if [[ "${continue_from}" =~ ^[0-9]+$ ]]; then
     ## TODO: Are negative numbers allowable here? If so, use
     ## is_integer instead of is_whole_number.
-    is_whole_number "$index" || return 1
-    is_whole_number "$continue_from" || return 1
+    is_whole_number "${index}" || return 1
+    is_whole_number "${continue_from}" || return 1
     if (( index >= continue_from )); then
       _ssp_state="yes"
       return 0
@@ -207,7 +216,7 @@ state_setup() {
   ## input fully before writing, so replacing the same file is safe.
   if [ "${#STATE_DONE_SET[@]}" -gt 0 ]; then
     for title in "${!STATE_DONE_SET[@]}"; do
-      printf '%s\t%s\n' "${STATE_DONE_SET[${title}]}" "${title}"
+      printf '%s\n' "${STATE_DONE_SET[${title}]}"$'\t'"${title}"
     done | sponge "${STATE_FILE}"
   fi
 
@@ -256,7 +265,7 @@ state_record_done() {
   state_done_count=$((state_done_count + 1))
   if state_enabled; then
     ## TODO: Use 'tee --append' or 'sponge -a' here?
-    printf '%s\t%s\n' "done" "${title}" >> "${STATE_FILE}"
+    printf '%s\n' "done"$'\t'"${title}" >> "${STATE_FILE}"
     STATE_DONE_SET["${title}"]="done"
   fi
 }
@@ -269,7 +278,7 @@ state_record_fail() {
   state_failed_titles+=("${title}")
   if state_enabled; then
     ## TODO: Use 'tee --append' or 'sponge -a' here?
-    printf '%s\t%s\n' "fail" "${title}" >> "${STATE_FILE}"
+    printf '%s\n' "fail"$'\t'"${title}" >> "${STATE_FILE}"
     STATE_DONE_SET["${title}"]="fail"
   fi
   if [ -n "${context}" ]; then
@@ -314,12 +323,12 @@ state_finish() {
 exit_handler() {
   local exit_code="$?"
   trap - INT HUP ABRT QUIT EXIT
-  if [ "$exit_code" = "0" ]; then
-    log info "END: with OK exit code: '$exit_code'"
+  if [ "${exit_code}" = "0" ]; then
+    log info "END: with OK exit code: '${exit_code}'"
   else
-    log error "END: with ERROR exit code: '$exit_code'"
+    log error "END: with ERROR exit code: '${exit_code}'"
   fi
-  exit "$exit_code"
+  exit "${exit_code}"
 }
 
 set_curl_binary_default() {
@@ -334,7 +343,7 @@ set_backup_page_item() {
   local backup_page_item
 
   backup_page_item="$(stecho "$1")"
-  if [ -z "$backup_page_item" ]; then
+  if [ -z "${backup_page_item}" ]; then
     die 1 "${FUNCNAME[0]}: 1 is empty!"
   fi
 
@@ -345,18 +354,18 @@ set_backup_page_item() {
   ## - '%', '&', '#', '?' etc. are percent-encoded.
   ## - '_', '.', '-', '~', ':' are left as-is (safe in filenames).
   ## Round-trips with decode_backup_page_item / mw-urlencode --decode-filename-to-page.
-  backup_page_item="$(mw-urlencode --encode-page-to-filename "$backup_page_item")"
+  backup_page_item="$(mw-urlencode --encode-page-to-filename "${backup_page_item}")"
 
   check_is_not_empty_and_only_one_line backup_page_item
   if ! validate_safe_filename backup_page_item; then
-    log error "${FUNCNAME[0]}: validate_safe_filename backup_page_item failed. Checking '$backup_page_item' for unicode using unicode-show for debugging purposes."
+    log error "${FUNCNAME[0]}: validate_safe_filename backup_page_item failed. Checking '${backup_page_item}' for unicode using unicode-show for debugging purposes."
     printf '%s\n' "--- unicode-show start:"
-    printf '%s\n' "$backup_page_item" | unicode-show
+    printf '%s\n' "${backup_page_item}" | unicode-show
     printf '%s\n' "--- End of unicode-show."
     return 1
   fi
 
-  stecho "$backup_page_item"
+  stecho "${backup_page_item}"
 }
 
 set_backup_filename_item() {
@@ -364,7 +373,7 @@ set_backup_filename_item() {
 
   backup_filename_item="$1"
 
-  if [ -z "$backup_filename_item" ]; then
+  if [ -z "${backup_filename_item}" ]; then
     die 1 "${FUNCNAME[0]}: 1 is empty!"
   fi
 
@@ -376,11 +385,11 @@ set_backup_filename_item() {
   check_is_not_empty_and_only_one_line backup_filename_item
   if ! validate_safe_filename backup_filename_item; then
     log error "${FUNCNAME[0]}: validate_safe_filename backup_filename_item failed."
-    printf '%s\n' "$backup_filename_item" | unicode-show
+    printf '%s\n' "${backup_filename_item}" | unicode-show
     return 1
   fi
 
-  stecho "$backup_filename_item"
+  stecho "${backup_filename_item}"
 }
 
 ## WARNING: decoded output restores '/' characters. The result must
@@ -390,27 +399,27 @@ decode_backup_page_item() {
   local decoded
 
   decoded="$(stecho "$1")"
-  if [ -z "$decoded" ]; then
+  if [ -z "${decoded}" ]; then
     die 1 "${FUNCNAME[0]}: 1 is empty!"
   fi
 
   ## Standard percent-decoding via Python's urllib.parse.unquote.
   ## Reverses set_backup_page_item / mw-urlencode --encode-page-to-filename.
-  mw-urlencode --decode-filename-to-page "$decoded"
+  mw-urlencode --decode-filename-to-page "${decoded}"
 }
 
 decode_backup_filename_item() {
   local filename decoded
 
   filename="$(stecho "$1")"
-  if [ -z "$filename" ]; then
+  if [ -z "${filename}" ]; then
     die 1 "${FUNCNAME[0]}: 1 is empty!"
   fi
 
   ## Remove .mw extension.
   decoded="${filename%.mw}"
 
-  decode_backup_page_item "$decoded"
+  decode_backup_page_item "${decoded}"
 }
 
 ## Defense-in-depth against directory traversal.
@@ -431,23 +440,23 @@ assert_path_within_dir() {
   base_dir="$1"
   target_path="$2"
 
-  if [ -z "$base_dir" ]; then
+  if [ -z "${base_dir}" ]; then
     die 1 "${FUNCNAME[0]}: base_dir is empty!"
   fi
 
-  if [ -z "$target_path" ]; then
+  if [ -z "${target_path}" ]; then
     die 1 "${FUNCNAME[0]}: target_path is empty!"
   fi
 
-  resolved_base="$(realpath -- "$base_dir")"
-  resolved_target="$(realpath -m -- "$target_path")"
+  resolved_base="$(realpath -- "${base_dir}")"
+  resolved_target="$(realpath -m -- "${target_path}")"
 
-  case "$resolved_target" in
-    "$resolved_base"/*)
+  case "${resolved_target}" in
+    "${resolved_base}"/*)
       return 0
       ;;
     *)
-      die 1 "${FUNCNAME[0]}: path traversal blocked! target: '$resolved_target' is outside base: '$resolved_base'"
+      die 1 "${FUNCNAME[0]}: path traversal blocked! target: '${resolved_target}' is outside base: '${resolved_base}'"
       ;;
   esac
 }
@@ -518,16 +527,16 @@ curl_run() {
     output_file="$(mktemp -t curl_run.XXXXXXXX)" || die 1 "${FUNCNAME[0]}: mktemp failed"
   else
     ## If caller explicitly targets stdout, don't try to rm/touch/stcat it
-    case "$output_file" in
+    case "${output_file}" in
       "-"|/dev/stdout|/dev/fd/1|/proc/self/fd/1)
         output_is_stdout="true"
         ;;
     esac
   fi
 
-  if [ "$output_is_stdout" != "true" ]; then
-    safe-rm -f -- "$output_file"
-    touch -- "$output_file"
+  if [ "${output_is_stdout}" != "true" ]; then
+    safe-rm -f -- "${output_file}"
+    touch -- "${output_file}"
   fi
 
   args=( "$@" )
@@ -535,35 +544,35 @@ curl_run() {
 
   [[ -v curl_run_no_encode ]] || curl_run_no_encode=""
 
-  if [ "$curl_run_no_encode" = "true" ]; then
-    encoded_url="$url"
+  if [ "${curl_run_no_encode}" = "true" ]; then
+    encoded_url="${url}"
   else
-    encoded_url="$(mw-urlencode "$url")"
+    encoded_url="$(mw-urlencode "${url}")"
   fi
 
   curl_exit_code=0
 
   ## Rebuild args: exclude last param (url), then append encoded url.
   ## If we created a temp output, inject --output <temp> so we can capture it.
-  if [ "$created_temp_output" = "true" ]; then
-    args=("${@:1:$#-1}" "--output" "$output_file" "$encoded_url")
+  if [ "${created_temp_output}" = "true" ]; then
+    args=("${@:1:$#-1}" "--output" "${output_file}" "${encoded_url}")
   else
-    args=("${@:1:$#-1}" "$encoded_url")
+    args=("${@:1:$#-1}" "${encoded_url}")
   fi
 
-  log_run debug "$curl" "${args[@]}" || curl_exit_code="$?"
+  log_run debug "${curl}" "${args[@]}" || curl_exit_code="$?"
 
-  if [ "$curl_exit_code" != "0" ]; then
-    log error "curl failed with exit code '$curl_exit_code': url: '$encoded_url' output_file: '${output_file-}'"
-    if [ "$output_is_stdout" != "true" ] && [ -n "${output_file-}" ]; then
-      stcat "$output_file" >&2 || true
+  if [ "${curl_exit_code}" != "0" ]; then
+    log error "curl failed with exit code '${curl_exit_code}': url: '${encoded_url}' output_file: '${output_file-}'"
+    if [ "${output_is_stdout}" != "true" ] && [ -n "${output_file-}" ]; then
+      stcat "${output_file}" >&2 || true
     fi
     die 1 'curl failure, cannot continue.'
   fi
 
   # If caller didn't specify --output, behave like curl and print to stdout
-  if [ "$created_temp_output" = "true" ]; then
-    cat -- "$output_file"
+  if [ "${created_temp_output}" = "true" ]; then
+    cat -- "${output_file}"
   fi
 }
 
@@ -585,7 +594,7 @@ if [[ ! -v TMPFOLDER ]]; then
 fi
 [[ -v TMPFOLDER ]] || TMPFOLDER="$(mktemp --directory -t mediawiki-shell.XXXXXX)"
 [[ -v USERDOMAIN ]] || USERDOMAIN=""
-[[ -v cookie_jar ]] || cookie_jar="$TMPFOLDER/wiki-cookiejar"
+[[ -v cookie_jar ]] || cookie_jar="${TMPFOLDER}/wiki-cookiejar"
 [[ -v curl ]] || set_curl_binary_default
 [[ -v curl_opts ]] || curl_opts=(
   "--fail"
@@ -599,5 +608,5 @@ fi
 )
 
 umask 077
-mkdir --parents -- "$TMPFOLDER"
-chmod og-rw -- "$TMPFOLDER"
+mkdir --parents -- "${TMPFOLDER}"
+chmod og-rw -- "${TMPFOLDER}"
