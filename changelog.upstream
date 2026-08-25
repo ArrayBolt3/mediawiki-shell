@@ -1,3 +1,100 @@
+commit f0b287200922a8a394ee6b5d0f80a716d7e71e35
+Merge: 15e723a 7bb45bd
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Mon Aug 24 02:07:56 2026 -0400
+
+    Merge remote-tracking branch 'refs/remotes/org-ai-assisted/ai'
+
+commit 7bb45bdfe46abfdbd974ed8b7486a80125fd3443
+Author: claude (dev272 e8b76afb-795c-4739-8ebd-023de854021e) <noreply@anthropic.com>
+Date:   Fri Aug 21 05:37:09 2026 -0400
+
+    mediawiki-shell: keep a UTF-8 locale (drop the block LC_ALL=C that broke Unicode)
+
+    - ai-review (agy): the R-010 'export LC_ALL=C' forced the C byte-locale on tools
+      that process Unicode wiki content, breaking nocasematch, '[:space:]' trimming
+      and 'grep -i' on non-ASCII (NBSP not stripped, Unicode case not folded).
+    - These tools are designed for a UTF-8 default and already prefix an explicit
+      'LC_ALL=C' on the byte-exact operations (sort, tr). Drop the block-level
+      LC_ALL=C and mark '## style-ok: no-strict' (deliberate directive omission,
+      as with helper-scripts onion-time-pre-script) with the reason.
+
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+commit c232d4834e1d856d54fd5c01bb64babc8f450850
+Author: claude (dev272 e8b76afb-795c-4739-8ebd-023de854021e) <noreply@anthropic.com>
+Date:   Fri Aug 21 05:18:24 2026 -0400
+
+    mediawiki-shell: source helper-scripts via HELPER_SCRIPTS_PATH + clear whole-file gate debt
+
+    Convert the 10 helper-scripts-sourcing shell files to the relocatable
+    'source "${HELPER_SCRIPTS_PATH:-}"/usr/libexec/helper-scripts/<f>' form
+    with a relative '# shellcheck source=' directive, and clear the
+    whole-file static-gate debt they carried. Add '.github/dm-consumer.yml'
+    setting 'dist-ai-tests: helper-scripts: true' so the reusable pre-push
+    gate checks helper-scripts out as the repo sibling and shellcheck
+    follows the sources instead of emitting SC1091.
+
+    Files converted (all 10):
+      usr/bin/mw-multi-wiki, mw-all-pages, mw-wiki-fetch-backup,
+      mw-patch-modify-wiki-all, mw-copy-wiki-pages, mw-retry-wrapper,
+      mw-process-all-pages, mw-flagged-revisions-approve-all,
+      mw-copy-wiki-file, usr/share/mediawiki-shell/common.
+
+    Debt cleared:
+    - SC1091: removed the blanket '# shellcheck disable=SC1091' from
+      mw-retry-wrapper and common; replaced with per-source relative
+      '# shellcheck source=' directives.
+    - R-080: mw-all-pages parse_opt.sh directive was absolute
+      ('/usr/libexec/...'); rewritten relative.
+    - mw-multi-wiki strings.bsh source had no directive; added.
+    - SC2250: braced every flagged unbraced expansion across all 10 files
+      (~476 occurrences) via shellcheck's own require-variable-braces fix;
+      special params ("$@" etc.) left untouched.
+    - R-010: added the missing strict-mode directives.
+      - Already had inherit_errexit (6/7): appended 'export LC_ALL=C' to
+        mw-multi-wiki, mw-patch-modify-wiki-all, mw-copy-wiki-pages,
+        mw-process-all-pages, mw-flagged-revisions-approve-all,
+        mw-copy-wiki-file, common. Pure locale pin, no behaviour change.
+      - At 4/7: added 'shopt -s inherit_errexit', 'shopt -s shift_verbose'
+        and 'export LC_ALL=C' to mw-all-pages, mw-wiki-fetch-backup,
+        mw-retry-wrapper.
+    - R-070: mw-all-pages compact one-line case arms rewritten multi-line
+      ('get_arg; x="${arg}";;' -> own-line statements + ';;').
+    - R-030: common's three TSV writers rewritten from
+      "printf '%s\t%s\n' A B" to "printf '%s\n' A$'\t'B" -- the tab
+      separator moved into the data argument (R-030: data belongs in the
+      data string, format stays fixed). Byte-identical output; keeps R-030
+      active for the rest of the file (vs a file-wide waiver).
+
+    inherit_errexit audit (the behavioural change): every command
+    substitution in the three 4/7 files was reviewed. NO '|| true' guards
+    were needed:
+    - mw-all-pages: 'query_result=$(curl_run ...)' -- curl_run dies
+      internally on failure, so the assignment already aborts today under
+      errexit; inherit_errexit is neutral for a single-command sub. The two
+      jq subs are in 'if !' condition position (failure consumed).
+    - mw-wiki-fetch-backup: 'output_dir="$(dirname ...)"' single command,
+      neutral. The nested 'set_backup_filename_item "$(set_backup_page_item
+      ...)"' result is used blindly (no failure handling), so fail-fast is
+      the intended behaviour; inherit_errexit only makes an inner
+      normalization failure abort instead of continuing on garbage.
+    - mw-retry-wrapper: only sub is '$(seq 1 "${max_retries}")' in a
+      for-list (neutral); the retry logic is explicitly guarded ('"$@" ||
+      {...}', 'if execute_command').
+
+    No dist-ai suite exists for mediawiki-shell; a local unit-tests.yml
+    (tests/unit-tests.bash) and the CodeQL/pre-push consumer workflows are
+    present.
+
+    Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+commit 15e723ac96071ec16df43973eb8b029cc21a425c
+Author: Patrick Schleizer <adrelanos@whonix.org>
+Date:   Sat Aug 15 16:10:59 2026 +0000
+
+    bumped changelog version
+
 commit 2c2f651e8539a17cddd6a6610c80068e63c0e029
 Merge: 8ae4c1d 6fdc359
 Author: Patrick Schleizer <adrelanos@whonix.org>
